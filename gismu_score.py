@@ -15,7 +15,7 @@
 import sys
 import re
 import threading
-import Queue
+from queue import Queue
 
 from optparse import OptionParser
 
@@ -39,49 +39,51 @@ def main(words, params):
     #  source languages, which greatly reduced the computation."
     # (http://mail.lojban.org/lists/lojban-list/msg26536.html)
 
-    shapes = re.split('\s*,\s*', params.shapes)
+    shapes = re.split(r'\s*,\s*', params.shapes)
     candidate_iterator = GismuGenerator(c, v, shapes).iterator()
 
-    print >>sys.stderr, "Generating candidates..."
+    # print("Generating candidates...")
     # pre-extracting candidates from the iterator is not needed downstream
     # but lets us inform the user how many candidates will be evaluated
     candidates = list(candidate_iterator)
-    print >>sys.stderr, "%d candidates generated." % len(candidates)
+    # print("%d candidates generated." % len(candidates))
 
-    weights = [float(weight) for weight in re.split("\s*,\s*", params.weights)]
+    weights = [float(weight) for weight in re.split(r"\s*,\s*", params.weights)]
 
     scorer = GismuScorer(words, weights)
     if params.workers == 1:
-        print >>sys.stderr, "Scoring candidates..."
+        # print("Scoring candidates...")
         scores = compute_scores(candidates, scorer, params)
     else:
-        print >>sys.stderr, \
-          "Scoring candidates with %d workers..." % params.workers
+        # print("Scoring candidates with %d workers..." % params.workers)
         scores = compute_scores_threaded(candidates, scorer, params)
 
-    print >>sys.stderr, "Sorting scores..."
-    scores.sort(lambda x,y:cmp(y[0], x[0]))
+    # print("Sorting scores...")
+    scores.sort(key=lambda x: x[0], reverse=True)
 
-    print >>sys.stderr, ""
-    print >>sys.stderr, "10 first gismu candidates are:"
-    print >>sys.stderr, ""
+    # print("")
+    print("10 first gismu candidates are:")
+    # print("")
     for record in scores[:10]:
-        print >>sys.stderr, record
+        ...
+        print(record)
 
     if params.gismu_list_path:
-        print >>sys.stderr, "Reading list of gismu... "
-        gismus = [line.strip() for line in file(params.gismu_list_path)]
+        # print("Reading list of gismu... ")
+        gismus = [line.strip() for line in open(params.gismu_list_path, 'r')]
         matcher = GismuMatcher(gismus)
-        print >>sys.stderr, "Exluding candidates similar to existing gismu..."
+        # print("Exluding candidates similar to existing gismu...")
         candidate = deduplicate_candidates(matcher, scores)
         if candidate == None:
-            print >>sys.stderr, "No suitable candidates found."
+            ...
+            # print("No suitable candidates found.")
         else:
-            print >>sys.stderr, "The winner is....\n"
-            print candidate.upper()
+            ...
+            # print("The winner is....\n")
+            # print(candidate.upper())
 
     if params.output_path:
-        print >>sys.stderr, "\rDumping scores to %s" % params.output_path
+        # print("\rDumping scores to %s" % params.output_path)
         sink = open(params.output_path, 'w')
         dump(scores, sink)
         sink.close()
@@ -97,8 +99,9 @@ def compute_scores(candidates, scorer, params):
         score = compute_score(scorer, candidate)
         scores.append(score)
         if (not quiet) and (i % 100 == 0):
-            print >>sys.stderr, "\010" * 9, # backspace
-            print >>sys.stderr, i + 1,
+            ...
+            # print("\010" * 9), # backspace
+            # print(i + 1,)
     return scores
 
 def compute_score(scorer, candidate):
@@ -112,7 +115,7 @@ def compute_scores_threaded(candidates, scorer, params):
     output_queue = Queue.Queue()
 
     workers = []
-    for x in xrange(params.workers):
+    for x in range(params.workers):
         worker = QueueWorker(input_queue, output_queue, scorer, params)
         worker.start()
         workers.append(worker)
@@ -139,8 +142,8 @@ def deduplicate_candidates(matcher, scores):
             unique_candidate = candidate
             break
         else:
-            print >>sys.stderr, \
-              "Candidate '%s' too much like gismu '%s'." % (candidate, gismu)
+            ...
+            # print("Candidate '%s' too much like gismu '%s'." % (candidate, gismu))
     return unique_candidate
 
 ##
@@ -165,8 +168,9 @@ class QueueWorker(threading.Thread):
 
             i += 1
             if (not quiet) and (i % 100 == 0):
-                print >>sys.stderr, "\010" * 9, # backspace
-                print >>sys.stderr, i,
+                ...
+                # print("\010" * 9) # backspace
+                # print(i)
 
     def read_input(self):
         candidate = None
@@ -183,14 +187,14 @@ class QueueWorker(threading.Thread):
 ##
 
 def check_weights_option(option, opt_str, value, parser):
-    if re.match('(\d{4}|finprims)$', value):
+    if re.match(r'(\d{4}|finprims)$', value):
         if value in LANGUAGE_WEIGHTS:
-            print >>sys.stderr, "Using language weights from %s..." % value
+            # print("Using language weights from %s..." % value)
             value = ",".join([ str(x) for x in LANGUAGE_WEIGHTS[value] ])
         else:
-            raise ValueError("No weights registered for %d" % year)
+            raise ValueError("No weights registered for %d" % value)
     else:
-        weights = re.split('\s*,\s*', value)
+        weights = re.split(r'\s*,\s*', value)
         if len(weights) < 2:
             raise ValueError("%s must include at least 2 values" % opt_str)
         [ check_weight_option(opt_str, weight) for weight in weights ]
@@ -207,7 +211,7 @@ def check_weight_option(opt_str, weight_string):
         raise ValueError("Values for %s must be numbers greater than zero" % opt_str)
 
 def check_shapes_option(option, opt_str, value, parser):
-    shapes = re.split('\s*,\s*', value)
+    shapes = re.split(r'\s*,\s*', value)
     for shape in shapes:
         if len(shape) < 4:
             raise ValueError("Value for %s must contain at least 4 letters" % opt_str)
@@ -216,7 +220,7 @@ def check_shapes_option(option, opt_str, value, parser):
     setattr(parser.values, option.dest, value)
 
 def validate_words(words, params):
-    weight_count = len(re.split("\s*,\s*", params.weights))
+    weight_count = len(re.split(r"\s*,\s*", params.weights))
     if len(words) != weight_count:
         raise ValueError("Expected %d words as input" % weight_count)
     for word in words:
@@ -259,13 +263,13 @@ if __name__ == '__main__':
     try:
         (params, words) = options.parse_args()
         validate_words(words, params)
-    except Exception, e: # NOTE: python 2.5 syntax for jython (sorry, python3!)
-        print >>sys.stderr, "\n%s\n" % e
+    except Exception as e:
+        # print("\n{}\n".format(e), file=sys.stderr)
         error = True
 
     if error:
-        options.print_help()
-        print >>sys.stderr
+        # options.print_help()
+        # print >>sys.stderr
         exit()
 
     main(words, params)

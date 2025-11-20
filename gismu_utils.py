@@ -9,7 +9,8 @@
 import sys
 import re
 
-from itertools import chain, ifilter
+from itertools import chain
+from functools import reduce
 
 # placate python 2.5 (e.g. jython)
 if sys.version_info < (2, 6):
@@ -122,7 +123,7 @@ class GismuGenerator:
     def shape_iterator(self, shape_string):
         shape = self.shape_for_string(shape_string)
         validator = self.shape_validator(shape_string)
-        return ifilter(validator, reduce(XADD, shape))
+        return filter(validator, reduce(XADD, shape))
 
     def shape_for_string(self, string):
         shape = []
@@ -253,7 +254,7 @@ class GismuMatcher:
     def match_structure(self, gismu, candidate, structural_patterns):
         similar = False
         common_len = min(len(candidate), len(gismu))
-        for i in xrange(common_len):
+        for i in range(common_len):
             if self.strings_match_except(gismu, candidate, i, common_len) and \
               self.match_structural_pattern(gismu[i], structural_patterns[i]):
                 similar = True
